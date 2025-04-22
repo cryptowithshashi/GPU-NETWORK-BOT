@@ -1,0 +1,2 @@
+# Proxies for the bot
+192.168.1.100:8888:myuser:mypassword123

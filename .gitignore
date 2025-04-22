@@ -1,0 +1,18 @@
+# Node dependencies
+node_modules/
+
+# Wallet secrets - NEVER commit this! 🙅‍♂️
+wallets.txt
+
+# Proxy secrets - NEVER commit this! 🔒
+proxy.txt
+
+# Log files (if any added later)
+*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Environment variables file (though we removed dotenv)
+.env*

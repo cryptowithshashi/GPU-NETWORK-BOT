@@ -1,21 +1,70 @@
-# ✨ GPU Network Bot - Enhanced Version ✨
+# GPU NETWORK BOT
 
-This Node.js bot automates interactions with the GPU Network platform, specifically focusing on authentication and task verification. It features a Terminal User Interface (TUI) built with `blessed` for real-time logging and status updates.
-
-This version is a complete rewrite focusing on modern JavaScript (ES Modules), modularity, security (loading keys from `wallets.txt` only), and an improved user experience via the TUI.
+A Node.js-based Terminal User Interface (TUI) bot designed to automate tasks on the GPU Network platform. This tool allows efficient multi-wallet interactions with the GPU protocol, handling batch operations, token-based auth, and proxy support.
 
 ## Features
 
-* **Automated Login:** Handles nonce fetching, message signing (EIP-4361), and verification.
-* **Task Verification:** Fetches incomplete social tasks and attempts to verify them.
-* **Secure Wallet Handling:** Loads private keys exclusively from a `.gitignore`'d `wallets.txt` file. No `.env` needed!
-* **Terminal UI (TUI):** Provides a clear, organized view of logs and bot status using `blessed`.
-    * Separate panes for main logs and success-only logs.
-    * Real-time status bar.
-    * Color-coded log levels with emojis (✅, ⌛️, ⚠️, 🚨).
-    * Auto-resizing interface.
-* **Modular Code:** Logic is split into manageable ES Modules (`loadWallets`, `botLogic`, `tui`, `events`).
-* **Event-Driven:** Uses Node.js `EventEmitter` for communication between backend logic and the TUI.
-* **Customizable Styling:** Uses `chalk` for colored output within the TUI.
+- **Automated GPU Network Tasks**: Streamlines interactions with GPU Network's services.
+- **Multi-Wallet Token Input**: Works with multiple tokens entered through a file.
+- **Batch Execution**: Runs GPU Network operations across several accounts in one go.
+- **Proxy Support**: Adds privacy and load balancing by routing requests via proxies.
+- **Customizable Loops**: Define how many cycles each token runs.
+- **Real-Time TUI**: Live logs and status per token.
 
-## TUI Layout Mockup
+## Pre Requisites
+
+Ensure Git, Node.js, and npm are installed:
+
+```bash
+sudo apt update
+sudo apt install git nodejs npm -y
+```
+
+## INSTALLATION GUIDE
+
+### Clone Repository
+
+```bash
+git clone https://github.com/cryptowithshashi/GPU-NETWORK-BOT.git
+cd GPU-NETWORK-BOT
+```
+
+### Install Dependencies
+
+```bash
+npm install
+```
+
+## Configuration
+
+- **wallets.txt** - Enter your private keys here, one per line. Make sure **not to include** the `0x` prefix. If your key starts with `0x`, remove it before adding it to the file.
+
+- **proxies.txt** (Optional) - Format each line as:
+  ```
+  host:port
+  host:port:user:pass
+  user:pass@host:port
+  ```
+
+## Running the Bot
+
+```bash
+node index.js
+```
+
+You’ll be prompted to enter how many times each token should perform tasks. Once started, the TUI will show logs and statuses.
+
+## TUI Controls
+
+- **Switch Panels**: Press `Tab`.
+- **Scroll Logs**: Use arrow keys, `j/k`, or mouse scroll.
+- **Stop Execution**: Press `Ctrl+C`.
+
+## Disclaimer
+
+This script uses sensitive tokens to interact with a blockchain protocol. Always use with caution and at your own risk. The developer is not liable for any issues arising from use.
+
+## ABOUT ME
+
+- **Twitter**: [https://x.com/SHASHI522004](https://x.com/SHASHI522004)
+- **GitHub**: [https://github.com/cryptowithshashi](https://github.com/cryptowithshashi)

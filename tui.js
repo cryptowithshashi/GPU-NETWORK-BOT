@@ -1,232 +1,137 @@
-// ✨ tui.js: Creates the Terminal User Interface using Blessed ✨
+// dashboard/ui.js
+// Sets up the Blessed TUI layout and manages screen updates.
 
 import blessed from 'blessed';
-import chalk from 'chalk';
-import sharedEmitter from './events.js'; // Import the shared event bus 📢
+import emitter, { EVENTS } from '../conduit/emitter.js';
+import { logger } from '../util/logger.js';
+import * as widgets from './widgets.js';
 
-// --- TUI Configuration ---
-const BANNER_TEXT = '✨ GPU NETWORK BOT BY CRYPTO WITH SHASHI ✨';
+let screen;
+let bannerBox, mainLogBox, successLogBox, statusBox;
+let currentStatusData = {};
 
-// --- Create Blessed Screen ---
-const screen = blessed.screen({
-    smartCSR: true, // Optimizes screen redrawing
-    fullUnicode: true, // Supports unicode characters like emojis
-    title: 'GPU Network Bot',
-    autoPadding: true, // Automatically add padding to elements
-});
+/**
+ * Initializes and sets up the Blessed screen and layout.
+ */
+export function initializeUI() {
+  logger.info('🎨 Initializing Terminal UI...');
 
-// --- TUI Elements ---
+  screen = blessed.screen({
+    smartCSR: true,
+    title: 'GPU-NETWORK-BOT CLI',
+    fullUnicode: true,
+    dockBorders: true,
+    autoPadding: false,
+    // --- ADD THIS LINE ---
+    // Force a specific terminal type. Try 'xterm-256color', 'xterm', or 'screen'.
+    // This can sometimes override problematic environment settings on servers.
+    terminal: 'xterm-256color',
+    // --------------------
+  });
 
-// Box 1: Banner
-const bannerBox = blessed.box({
+  const boxPadding = { top: 0, right: 1, bottom: 0, left: 1 };
+
+  // --- Layout ---
+
+  bannerBox = blessed.box({
     parent: screen,
     top: 0,
     left: 0,
     width: '100%',
-    height: 3, // Fixed height for banner
-    content: `{center}${BANNER_TEXT}{/center}`,
-    tags: true, // Enable tags like {center}
-    border: {
-        type: 'line',
-    },
-    style: {
-        fg: 'white',
-        border: {
-            fg: '#00ff00', // Green border
-        },
-    },
-});
-
-// Box 2: Main Logs (Left Side)
-const mainLogBox = blessed.log({ // Use Log instead of Box for scrolling
-    parent: screen,
-    top: 3, // Below banner
-    left: 0,
-    width: '65%', // 65% width
-    height: '100%-6', // Fill height minus banner and status bar
-    label: '📝 Main Logs',
+    height: 3,
+    content: `{center}{bold}📊 GPU-NETWORK-BOT by CRYPTO-SHASHI{/bold}{/center}`,
     tags: true,
-    border: {
-        type: 'line',
-    },
-    style: {
-        fg: 'white',
-        border: {
-            fg: '#ffffff', // White border
-        },
-        label: {
-            fg: 'yellow'
-        }
-    },
+    border: { type: 'heavy' }, // Or 'line', 'double'
+    style: { fg: 'white', bg: 'black', border: { fg: 'magenta' }, bold: true }
+  });
+
+  mainLogBox = blessed.log({
+    parent: screen,
+    label: '{bold} Main Log 📜 {/bold}',
+    tags: true,
+    top: 3,
+    left: 0,
+    width: '65%',
+    height: '100%-3',
+    padding: boxPadding,
+    border: { type: 'heavy' }, // Or 'line', 'double'
+    style: { fg: 'white', bg: 'black', border: { fg: 'white' }, label: { fg: 'white', bold: true } },
     scrollable: true,
     alwaysScroll: true,
-    scrollbar: {
-        ch: ' ',
-        track: { bg: 'grey' },
-        style: { bg: 'blue' },
-    },
-    mouse: true, // Allow mouse interaction for scrolling
-});
+    scrollbar: { ch: ' ', inverse: true },
+    mouse: true
+  });
 
-// Box 3: Success Logs (Right Side, Nested within a container for positioning)
-const successLogContainer = blessed.box({
+  successLogBox = blessed.log({
     parent: screen,
-    top: 3, // Below banner
-    left: '65%', // To the right of main logs
-    width: '35%', // Remaining width
-    height: '100%-6', // Fill height minus banner and status bar
-    // No border here, just a container
-});
-
-
-const successLogBox = blessed.log({
-    parent: successLogContainer, // Attach to the container
-    top: 1, // Offset within container
-    left: 1,
-    width: '100%-2', // Fit within container padding
-    height: '100%-2',
-    label: '✅ Success Logs',
+    label: '{bold} Success Log ✅ {/bold}',
     tags: true,
-    border: {
-        type: 'line',
-    },
-    style: {
-        fg: 'white',
-        border: {
-            fg: '#00cc00', // Darker Green border
-        },
-         label: {
-            fg: 'green'
-        }
-    },
+    top: 3,
+    left: '65%',
+    width: '35%',
+    height: '50%-1',
+    padding: boxPadding,
+    border: { type: 'heavy' }, // Or 'line', 'double'
+    style: { fg: 'green', bg: 'black', border: { fg: 'green' }, label: { fg: 'green', bold: true } },
     scrollable: true,
     alwaysScroll: true,
-    scrollbar: {
-        ch: ' ',
-        track: { bg: 'grey' },
-        style: { bg: 'green' },
-    },
-    mouse: true,
-});
+    scrollbar: { ch: ' ', inverse: true },
+    mouse: true
+  });
 
-
-// Box 4: Status Bar
-const statusBar = blessed.box({
+  statusBox = blessed.box({
     parent: screen,
-    bottom: 0, // At the bottom
-    left: 0,
-    width: '100%',
-    height: 3, // Fixed height
-    label: '📊 Status / Info',
+    label: '{bold} Status Panel 📊 {/bold}',
     tags: true,
-    border: {
-        type: 'line',
-    },
-    style: {
-        fg: 'white',
-        border: {
-            fg: '#ffa500', // Orange border
-        },
-        label: {
-            fg: 'cyan'
-        }
-    },
-    content: ' Initializing...', // Initial content
-});
+    top: '50%+1',
+    left: '65%',
+    width: '35%',
+    height: '50%-2',
+    padding: boxPadding,
+    border: { type: 'heavy' }, // Or 'line', 'double'
+    style: { fg: 'cyan', bg: 'black', border: { fg: 'cyan' }, label: { fg: 'cyan', bold: true } },
+    content: 'Initializing...'
+  });
 
-// --- Event Handling ---
-
-let statusData = {
-    walletsCount: 0,
-    accountsCount: 0, // Example, might need adjustment based on actual logic
-    channelsCount: 0, // Example
-    status: 'Waiting...',
-};
-
-// Function to format log messages with timestamps and colors
-function formatLogMessage(level, message) {
-    const timestamp = new Date().toLocaleTimeString();
-    let coloredMessage;
-
-    switch (level.toUpperCase()) {
-        case 'INFO':
-            coloredMessage = chalk.blue(`[${timestamp}] ${level}: ${message}`);
-            break;
-         case 'SUCCESS':
-            coloredMessage = chalk.green(`[${timestamp}] ✅ ${message}`);
-            break;
-        case 'WAIT':
-            coloredMessage = chalk.yellow(`[${timestamp}] ⌛️ ${message}`);
-            break;
-        case 'WARN':
-            coloredMessage = chalk.yellowBright(`[${timestamp}] ⚠️ ${message}`);
-            break;
-        case 'ERROR':
-            coloredMessage = chalk.redBright(`[${timestamp}] 🚨 ${message}`);
-            break;
-        default:
-            coloredMessage = chalk.white(`[${timestamp}] ${level}: ${message}`);
+  // --- Event Listeners ---
+  emitter.on(EVENTS.LOG, (data) => {
+    if (screen) { widgets.updateMainLogBox(mainLogBox, data); screen.render(); }
+  });
+  emitter.on(EVENTS.SUCCESS, (data) => {
+     if (screen) { widgets.updateSuccessLogBox(successLogBox, data); screen.render(); }
+  });
+  emitter.on(EVENTS.STATUS_UPDATE, (newData) => {
+     if (screen) { currentStatusData = widgets.updateStatusPanel(statusBox, currentStatusData, newData); screen.render(); }
+  });
+   emitter.on(EVENTS.ERROR, (data) => {
+    if (screen && data.error) {
+      widgets.updateMainLogBox(mainLogBox, { level: 'error', text: data.error.message || 'An unknown error occurred' });
+      currentStatusData = widgets.updateStatusPanel(statusBox, currentStatusData, { state: 'ERROR' });
+      screen.render();
     }
-    return coloredMessage;
+  });
+
+  // --- Controls ---
+  screen.key(['escape', 'q', 'C-c'], (ch, key) => {
+    logger.warn('🛑 Termination signal received. Shutting down...');
+    emitter.emit('shutdown');
+    setTimeout(() => { destroyUI(); process.exit(0); }, 100);
+  });
+
+  // Initial render & status setup
+  screen.render();
+  logger.success('🎨 Terminal UI Initialized Successfully!');
+  currentStatusData = widgets.updateStatusPanel(statusBox, {}, { state: 'INITIALIZING' });
+  screen.render();
+
+  return screen;
 }
 
-// Listen for 'log' events from the shared emitter
-sharedEmitter.on('log', ({ level, message }) => {
-    const formattedLog = formatLogMessage(level, message);
-
-    // Add to main log box regardless of level
-    mainLogBox.log(formattedLog);
-
-    // Add to success log box ONLY if level is 'SUCCESS'
-    if (level.toUpperCase() === 'SUCCESS') {
-        successLogBox.log(formattedLog);
-    }
-
-    // Force screen redraw after logging
-    screen.render();
-});
-
-
-// Listen for 'statusUpdate' events
-sharedEmitter.on('statusUpdate', (update) => {
-     // Merge new update data with existing status data
-     statusData = { ...statusData, ...update };
-
-     // Format the status content
-     const statusContent = ` Wallets: ${statusData.walletsCount} | Status: ${statusData.status}`;
-                                // Add more fields like | Accounts: ${statusData.accountsCount} etc. if needed
-
-     statusBar.setContent(statusContent); // Update status bar content
-     screen.render(); // Redraw screen
-});
-
-
-// --- Screen Management ---
-
-// Handle terminal resize events
-screen.on('resize', () => {
-    // Re-calculate and apply positions/dimensions if needed
-    // Blessed typically handles basic percentage resizing automatically,
-    // but complex layouts might need manual adjustments here.
-    // For this layout, blessed should handle it.
-    bannerBox.emit('attach'); // Re-attach to re-render borders correctly
-    mainLogBox.emit('attach');
-    successLogContainer.emit('attach');
-    successLogBox.emit('attach');
-    statusBar.emit('attach');
-    screen.render(); // Ensure screen redraws after resize
-});
-
-// Handle exit key (Ctrl+C)
-screen.key(['C-c'], (ch, key) => {
-    // Perform any cleanup here if needed
-    return process.exit(0); // Exit cleanly
-});
-
-// Initial render of the screen
-screen.render();
-
-
-// Export the screen object if needed elsewhere (usually not necessary)
-// export { screen }; // Typically TUI manages itself
-// created by crypto with shashi
+/** Destroys the Blessed screen. */
+export function destroyUI() {
+  if (screen) {
+    screen.destroy();
+    screen = null;
+    logger.info('🎨 Terminal UI Destroyed.');
+  }
+}
